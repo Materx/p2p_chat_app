@@ -2,8 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>meow chat 🐱</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MeowChat 🐱</title>
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#7ec8e3">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MeowChat">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="description" content="Cute private P2P chat app 🐱">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 <style>
@@ -176,6 +185,50 @@ function addSysMsg(t){const msgs=document.getElementById('messages'),d=document.
 function sendMessage(){const inp=document.getElementById('msg-input'),text=inp.value.trim();if(!text)return;socket.emit('message',{text});inp.value='';inp.focus()}
 document.addEventListener('DOMContentLoaded',()=>{document.getElementById('msg-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}})});
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// Typing indicator
+let typingTimer;
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('msg-input');
+  inp.addEventListener('input', () => {
+    socket.emit('typing', { typing: true });
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => socket.emit('typing', { typing: false }), 1500);
+  });
+});
+
+socket.on('typing', ({ name, typing }) => {
+  let indicator = document.getElementById('typing-indicator');
+  if (!indicator) {
+    indicator = document.createElement('div');
+    indicator.id = 'typing-indicator';
+    indicator.style.cssText = 'font-size:0.7rem;color:var(--muted);padding:2px 4px;font-style:italic;min-height:20px;transition:opacity 0.2s;';
+    document.getElementById('messages').after(indicator);
+  }
+  indicator.textContent = typing ? `${name} is typing...` : '';
+});
+
+// Service Worker registration
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(() => console.log('SW registered 🐱'))
+      .catch(err => console.log('SW failed:', err));
+  });
+}
+
+// Install prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.createElement('button');
+  btn.textContent = '📲 Install App';
+  btn.style.cssText = 'position:fixed;bottom:80px;right:16px;padding:10px 16px;background:linear-gradient(135deg,#7ec8e3,#a8e6cf);color:white;border:none;border-radius:20px;font-family:DM Sans,sans-serif;font-weight:600;font-size:0.8rem;cursor:pointer;box-shadow:0 4px 14px rgba(126,200,227,0.4);z-index:1000;';
+  btn.onclick = () => { deferredPrompt.prompt(); btn.remove(); };
+  document.body.appendChild(btn);
+  setTimeout(() => btn.remove(), 15000);
+});
 </script>
 </body>
 </html>
