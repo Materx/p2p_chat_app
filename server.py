@@ -1,8 +1,8 @@
 """
-MeowChat Server — full featured
+MeowChat Server — gevent version
 """
-import eventlet
-eventlet.monkey_patch()
+from gevent import monkey
+monkey.patch_all()
 
 from flask import Flask, send_from_directory
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -10,8 +10,13 @@ import os
 
 app = Flask(__name__, static_folder=".", template_folder=".")
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "meowchat-secret")
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet",
-                    max_http_buffer_size=5 * 1024 * 1024)  # 5MB for images
+
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode="gevent",
+    max_http_buffer_size=5 * 1024 * 1024
+)
 
 users = {}
 rooms = {}
@@ -105,8 +110,10 @@ def on_typing(data):
     sid = request.sid
     if sid not in users: return
     user = users[sid]
-    emit("typing", {"name": user["name"], "typing": data.get("typing", False)},
-         room=user["room"], skip_sid=sid)
+    emit("typing", {
+        "name": user["name"],
+        "typing": data.get("typing", False)
+    }, room=user["room"], skip_sid=sid)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
